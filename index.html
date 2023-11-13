@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">  
+</head>
+<body>
+
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          Login
+        </div>
+        <div class="card-body">
+          <form id="loginForm">
+            <div class="form-group">
+              <label for="email">Email:</label>
+              <input type="email" class="form-control" id="email" placeholder="Enter email" required>
+            </div>
+            <div class="form-group">
+              <label for="password">Password:</label>
+              <input type="password" class="form-control" id="password" placeholder="Enter password" required>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="login()">Login</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.0.7/dist/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script>
+  async function login() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    // Construye la URL de la API con las credenciales
+    const apiUrl = `https://enx8gtuh8i.execute-api.us-east-2.amazonaws.com/loginGetClientEmail?contacto=${email}&password=${password}`;
+
+    try {
+
+      // Realiza la solicitud a la API
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+
+      // Verifica si la respuesta es exitosa
+      if (response.ok) {
+        // Guarda los datos de sesión en cookies
+        document.cookie = `email=${email}; expires=Thu, 18 Dec 2023 12:00:00 UTC; path=/`;
+        document.cookie = `clienteID=${data.clienteID}; expires=Thu, 18 Dec 2023 12:00:00 UTC; path=/`;
+        document.cookie = `nombre=${data.nombre}; expires=Thu, 18 Dec 2023 12:00:00 UTC; path=/`;
+
+        // Redirecciona a la página de inicio o realiza otras acciones después del inicio de sesión exitoso
+        window.location.href = '/frontend-tickets/dashboard.html';
+
+      } else {
+        Swal.fire({
+            icon: 'error',
+            title: 'Credenciales incorrectas',
+            text: 'Por favor, verifica tus credenciales e intenta de nuevo.'
+        });
+      }
+
+    } catch (error) {
+      // Maneja errores de red u otros errores
+      console.error('Error during login:', error);
+      Swal.fire({
+            icon: 'error',
+            title: 'Credenciales incorrectas',
+            text: 'Ah ocurrido un error mientras intentamos iniciar tu sesión.'
+        });
+    }
+  }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+
+</body>
+</html>

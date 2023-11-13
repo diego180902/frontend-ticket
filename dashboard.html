@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+</head>
+<body>
+
+    <!-- Navbar de Bootstrap con botón de logout -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="/frontend-tickets/dashboard.html">Dashboard</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="logout()">Logout</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container mt-5 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="card-header">
+                    <h1 class="card-title mb-0">Bienvenido</h1>
+                </div>
+                <div class="card-body">
+                    <p id="nombre" class="h3 mb-3"></p>
+                </div>
+            </div>
+        </div>
+
+        </br>
+
+        <h3 class="card-subtitle mb-4 text-muted">Tickets:</h3>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Descripción</th>
+                        <th>Solución</th> <!-- Nuevo campo Solución -->
+                    </tr>
+                </thead>
+                <tbody id="tabla-tickets">
+                    <!-- Aquí se agregarán las filas de la tabla dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Formulario para registrar un nuevo ticket -->
+        <h3 class="card-subtitle mb-4 text-muted">Registrar Nuevo Ticket:</h3>
+        <form id="nuevo-ticket-form">
+            <div class="form-group">
+                <label for="clienteID">Cliente ID:</label>
+                <!-- Input no editable para mostrar el clienteID -->
+                <input type="text" class="form-control" id="clienteID" name="clienteID" readonly>
+            </div>
+            <div class="form-group">
+                <label for="problema">Problema/Naturaleza:</label>
+                <input type="text" class="form-control" id="problema" name="problema" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Registrar Ticket</button>
+        </form>
+
+    </div>
+
+    <script>
+
+        // Función para cerrar sesión
+        function logout() {
+            // Elimina las cookies
+            document.cookie = 'nombre=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            document.cookie = 'clienteID=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+            // Redirige a la página index.html
+            window.location.href = 'index.html';
+        }
+
+        // Función para obtener el valor de una cookie por su nombre
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // Función para cargar el nombre del usuario desde las cookies y mostrarlo en el dashboard
+        function loadDashboard() {
+            const userName = getCookie('nombre');
+
+            if (userName) {
+                // Muestra el nombre del usuario en el dashboard
+                document.getElementById('nombre').innerText = userName;
+
+                // Obtiene el clienteID de la cookie
+                const clienteID = getCookie('clienteID');
+
+                // Realiza la consulta a la API de tickets usando el clienteID
+                fetch(`https://enx8gtuh8i.execute-api.us-east-2.amazonaws.com/getTicketByClient?clienteID=${clienteID}`)
+                    .then(response => response.json())
+                    .then(tickets => {
+                        const tablaTickets = document.getElementById('tabla-tickets');
+                        tickets.forEach(ticket => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${ticket.id}</td>
+                                <td>${ticket.problemas_naturaleza}</td>
+                                <td>${ticket.solucion || 'Pendiente...'}</td>
+                            `;
+                            tablaTickets.appendChild(row);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error al obtener los tickets:', error);
+                        // ... (manejo de error)
+                    });
+            } else {
+                // Si no se encuentra la cookie, muestra un mensaje de error
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No se encontró la información del usuario en las cookies.'
+                });
+            }
+        }
+
+        // Función para registrar un nuevo ticket
+        document.getElementById('nuevo-ticket-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            const clienteID = getCookie('clienteID');
+            const problema = document.getElementById('problema').value;
+
+            const nuevoTicket = {
+                clienteID: clienteID,
+                problemas_naturaleza: problema
+            };
+
+            const apiURL = 'https://enx8gtuh8i.execute-api.us-east-2.amazonaws.com/registrarTicket';
+
+            // Realiza la solicitud POST al API para registrar el nuevo ticket
+            fetch(apiURL, {
+                method: 'POST',
+                mode: 'cors',  // Habilita CORS para la solicitud
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(nuevoTicket),
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Actualiza la tabla con el nuevo ticket
+                loadDashboard();
+                // Limpia el formulario
+                document.getElementById('nuevo-ticket-form').reset();
+            })
+            .catch(error => {
+                console.error('Error al registrar el nuevo ticket:', error);
+            });
+        });
+
+        // Llena el campo clienteID con el valor de la cookie
+        document.getElementById('clienteID').value = getCookie('clienteID');
+        
+        window.onload = loadDashboard;
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+</body>
+</html>
